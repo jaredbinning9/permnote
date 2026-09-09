@@ -43,6 +43,17 @@ export default function Todos() {
       alert(`Update failed: ${error.message}`);
     }
   }
+  async function archiveNote(note: Note) {
+  setTodos((current) => current.filter((n) => n.id !== note.id));
+  const { error } = await supabase
+    .from("notes")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", note.id);
+  if (error) {
+    setTodos((current) => [note, ...current]);
+    alert(`Archive failed: ${error.message}`);
+  }
+}
 
   const open = todos.filter((t) => !t.is_done && t.is_todo);
   const done = todos.filter((t) => t.is_done && t.is_todo);
@@ -57,7 +68,7 @@ export default function Todos() {
         <p className="pt-4 text-center font-mono text-sm text-zinc-600">nothing open. nice.</p>
       )}
       {open.map((note) => (
-        <NoteRow key={note.id} note={note} onUpdate={updateNote} />
+        <NoteRow key={note.id} note={note} onUpdate={updateNote} onArchive={archiveNote} />
       ))}
 
       {done.length > 0 && (
@@ -66,7 +77,7 @@ export default function Todos() {
             done · {done.length}
           </h2>
           {done.map((note) => (
-            <NoteRow key={note.id} note={note} onUpdate={updateNote} />
+            <NoteRow key={note.id} note={note} onUpdate={updateNote} onArchive={archiveNote}/>
           ))}
         </>
       )}

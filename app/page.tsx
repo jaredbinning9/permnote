@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import type { Note } from "@/lib/types";
 import NoteRow from "@/components/NoteRow";
 import TabBar from "@/components/TabBar";
+import Toast from "@/components/Toast";
 
 function extractTags(content: string): string[] {
   const matches = content.match(/#[\w-]+/g);
@@ -22,14 +23,12 @@ function dayLabel(dateStr: string): string {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-function timeLabel(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-}
-
 export default function Home() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
+  const [pinnedOpen, setPinnedOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -50,23 +49,15 @@ export default function Home() {
     }
     init();
   }, [router]);
-  
-  async function updateNote(id: string, changes: Partial<Note>) {
-  const before = notes;
-  setNotes((current) =>
-    current.map((n) => (n.id === id ? { ...n, ...changes } : n))
-  );
-  const { error } = await supabase.from("notes").update(changes).eq("id", id);
-  if (error) {
-    setNotes(before);
-    alert(`Update failed: ${error.message}`);
+
+  function showToast(message: string, undo?: () => void) {
+    setToast({ message, undo });
+    setTimeout(() => setToast(null), 5000);
   }
-}
 
   async function addNote() {
     const content = draft.trim();
     if (!content) return;
-
     const temp: Note = {
       id: crypto.randomUUID(),
       content,
@@ -78,16 +69,13 @@ export default function Home() {
       archived_at: null,
       tags: extractTags(content),
     };
-
     setNotes([temp, ...notes]);
     setDraft("");
-
     const { data, error } = await supabase
       .from("notes")
       .insert({ content, tags: temp.tags })
       .select()
       .single();
-
     if (error) {
       setNotes((current) => current.filter((n) => n.id !== temp.id));
       setDraft(content);
@@ -96,6 +84,41 @@ export default function Home() {
       setNotes((current) => current.map((n) => (n.id === temp.id ? data : n)));
     }
   }
+
+  async function updateNote(id: string, changes: Partial<Note>) {
+    const before = notes;
+    setNotes((current) => current.map((n) => (n.id === id ? { ...n, ...changes } : n)));
+    const { error } = await supabase.from("notes").update(changes).eq("id", id);
+    if (error) {
+      setNotes(before);
+      alert(`Update failed: ${error.message}`);
+    }
+  }
+
+  async function archiveNote(note: Note) {
+    const stamp = new Date().toISOString();
+    setNotes((current) => current.filter((n) => n.id !== note.id));
+    const { error } = await supabase
+      .from("notes")
+      .update({ archived_at: stamp })
+      .eq("id", note.id);
+    if (error) {
+      setNotes((current) => [note, ...current]);
+      alert(`Archive failed: ${error.message}`);
+      return;
+    }
+    showToast("Note archived", async () => {
+      setToast(null);
+      setNotes((current) =>
+        [note, ...current].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+      );
+      await supabase.from("notes").update({ archived_at: null }).eq("id", note.id);
+    });
+  }
+
+  const pinned = notes.filter((n) => n.is_pinned);
 
   const groups: { label: string; items: Note[] }[] = [];
   for (const note of notes) {
@@ -118,8 +141,23 @@ export default function Home() {
         />
       </div>
 
-      {loading && <p className="pt-8 text-center font-mono text-sm text-zinc-600">loading...</p>}
+      {pinned.length > 0 && (
+        <section className="mb-1">
+          <button
+            onClick={() => setPinnedOpen(!pinnedOpen)}
+            className="flex items-center gap-2 py-1 font-mono text-xs text-zinc-500 hover:text-zinc-300"
+          >
+            <span className="text-amber-400">✦</span>
+            pinned · {pinned.length} {pinnedOpen ? "▾" : "▸"}
+          </button>
+          {pinnedOpen &&
+            pinned.map((note) => (
+              <NoteRow key={`pin-${note.id}`} note={note} onUpdate={updateNote} onArchive={archiveNote} />
+            ))}
+        </section>
+      )}
 
+      {loading && <p className="pt-8 text-center font-mono text-sm text-zinc-600">loading...</p>}
       {!loading && notes.length === 0 && (
         <p className="pt-8 text-center font-mono text-sm text-zinc-600">
           empty stream. type something above.
@@ -132,10 +170,13 @@ export default function Home() {
             {group.label}
           </h2>
           {group.items.map((note) => (
-          <NoteRow key={note.id} note={note} onUpdate={updateNote} />
+            <NoteRow key={note.id} note={note} onUpdate={updateNote} onArchive={archiveNote} />
           ))}
         </section>
       ))}
+
+      {toast && <Toast message={toast.message} onUndo={toast.undo} />}
+      <TabBar />
     </main>
   );
 }

@@ -20,6 +20,7 @@ export default function TabBar() {
     <nav className="fixed bottom-0 left-0 right-0 z-10 mx-auto flex max-w-xl border-t border-zinc-900 bg-zinc-950">
       {tab("/", "stream")}
       {tab("/todos", "todos")}
+      {tab("/search", "search")}
     </nav>
   );
 }

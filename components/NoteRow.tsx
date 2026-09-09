@@ -1,18 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import type { Note } from "@/lib/types";
 
 type Props = {
   note: Note;
   onUpdate: (id: string, changes: Partial<Note>) => void;
+  onArchive: (note: Note) => void;
 };
 
-export default function NoteRow({ note, onUpdate }: Props) {
+export default function NoteRow({ note, onUpdate, onArchive }: Props) {
   const overdue =
     note.is_todo && !note.is_done && note.due_at && new Date(note.due_at) < new Date();
 
   return (
-    <div className="border-b border-zinc-900 py-2.5">
+    <div className="group border-b border-zinc-900 py-2.5">
       <div className="flex items-start gap-3">
         {note.is_todo ? (
           <button
@@ -43,7 +45,13 @@ export default function NoteRow({ note, onUpdate }: Props) {
           >
             {note.content.split(/(#[\w-]+)/g).map((part, i) =>
               part.startsWith("#") ? (
-                <span key={i} className="text-sky-400">{part}</span>
+                <Link
+                  key={i}
+                  href={`/search?q=${encodeURIComponent(part)}`}
+                  className="text-sky-400 hover:text-sky-300"
+                >
+                  {part}
+                </Link>
               ) : (
                 part
               )
@@ -57,7 +65,9 @@ export default function NoteRow({ note, onUpdate }: Props) {
                 value={note.due_at ? note.due_at.slice(0, 10) : ""}
                 onChange={(e) =>
                   onUpdate(note.id, {
-                    due_at: e.target.value ? new Date(e.target.value + "T17:00:00").toISOString() : null,
+                    due_at: e.target.value
+                      ? new Date(e.target.value + "T17:00:00").toISOString()
+                      : null,
                   })
                 }
                 className={`rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 font-mono text-[10px] ${
@@ -69,15 +79,33 @@ export default function NoteRow({ note, onUpdate }: Props) {
           )}
         </div>
 
-        <button
-          onClick={() => onUpdate(note.id, { is_todo: !note.is_todo, is_done: false, due_at: null })}
-          aria-label="toggle todo"
-          className={`pt-0.5 font-mono text-xs ${
-            note.is_todo ? "text-amber-500" : "text-zinc-700 hover:text-zinc-500"
-          }`}
-        >
-          ◻
-        </button>
+        <div className="flex shrink-0 gap-2.5 pt-0.5">
+          <button
+            onClick={() => onUpdate(note.id, { is_pinned: !note.is_pinned })}
+            aria-label="toggle pin"
+            className={`font-mono text-xs ${
+              note.is_pinned ? "text-amber-400" : "text-zinc-700 hover:text-zinc-500"
+            }`}
+          >
+            ✦
+          </button>
+          <button
+            onClick={() => onUpdate(note.id, { is_todo: !note.is_todo, is_done: false, due_at: null })}
+            aria-label="toggle todo"
+            className={`font-mono text-xs ${
+              note.is_todo ? "text-amber-500" : "text-zinc-700 hover:text-zinc-500"
+            }`}
+          >
+            ◻
+          </button>
+          <button
+            onClick={() => onArchive(note)}
+            aria-label="archive note"
+            className="font-mono text-xs text-zinc-700 hover:text-red-400"
+          >
+            ×
+          </button>
+        </div>
       </div>
     </div>
   );
