@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Note } from "@/lib/types";
+import NoteRow from "@/components/NoteRow";
+import TabBar from "@/components/TabBar";
 
 function extractTags(content: string): string[] {
   const matches = content.match(/#[\w-]+/g);
@@ -48,6 +50,18 @@ export default function Home() {
     }
     init();
   }, [router]);
+  
+  async function updateNote(id: string, changes: Partial<Note>) {
+  const before = notes;
+  setNotes((current) =>
+    current.map((n) => (n.id === id ? { ...n, ...changes } : n))
+  );
+  const { error } = await supabase.from("notes").update(changes).eq("id", id);
+  if (error) {
+    setNotes(before);
+    alert(`Update failed: ${error.message}`);
+  }
+}
 
   async function addNote() {
     const content = draft.trim();
@@ -118,22 +132,7 @@ export default function Home() {
             {group.label}
           </h2>
           {group.items.map((note) => (
-            <div key={note.id} className="border-b border-zinc-900 py-2.5">
-              <div className="flex items-start gap-3">
-                <span className="pt-0.5 font-mono text-xs text-zinc-600">
-                  {timeLabel(note.created_at)}
-                </span>
-                <p className="flex-1 text-sm leading-relaxed text-zinc-300">
-                  {note.content.split(/(#[\w-]+)/g).map((part, i) =>
-                    part.startsWith("#") ? (
-                      <span key={i} className="text-sky-400">{part}</span>
-                    ) : (
-                      part
-                    )
-                  )}
-                </p>
-              </div>
-            </div>
+          <NoteRow key={note.id} note={note} onUpdate={updateNote} />
           ))}
         </section>
       ))}
