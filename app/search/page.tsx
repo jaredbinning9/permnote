@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -7,6 +8,11 @@ import type { Note } from "@/lib/types";
 import NoteRow from "@/components/NoteRow";
 import TabBar from "@/components/TabBar";
 
+<div className="pt-8 pb-2 text-center">
+  <Link href="/archive" className="font-mono text-xs text-zinc-700 hover:text-zinc-400">
+    view archived →
+  </Link>
+</div>
 function SearchInner() {
   const params = useSearchParams();
   const [query, setQuery] = useState(params.get("q") ?? "");
@@ -68,14 +74,22 @@ function SearchInner() {
           placeholder="Search notes, or #tag"
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-200 outline-none focus:border-zinc-600"
         />
-        <label className="mt-2 flex items-center gap-2 font-mono text-xs text-zinc-600">
-          <input
-            type="checkbox"
-            checked={includeArchived}
-            onChange={(e) => setIncludeArchived(e.target.checked)}
-          />
-          include archived
-        </label>
+      <div className="mt-2">
+  <label className="flex items-center gap-2 font-mono text-xs text-zinc-600">
+    <input
+      type="checkbox"
+      checked={includeArchived}
+      onChange={(e) => setIncludeArchived(e.target.checked)}
+    />
+    include archived
+  </label>
+  <Link
+    href="/archive"
+    className="mt-1.5 inline-block font-mono text-xs text-zinc-600 hover:text-zinc-300"
+  >
+    view archive →
+  </Link>
+</div>
       </div>
 
       {searched && results.length === 0 && (
