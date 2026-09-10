@@ -7,11 +7,7 @@ import type { Note } from "@/lib/types";
 import NoteRow from "@/components/NoteRow";
 import TabBar from "@/components/TabBar";
 import Toast from "@/components/Toast";
-
-function extractTags(content: string): string[] {
-  const matches = content.match(/#[\w-]+/g);
-  return matches ? matches.map((t) => t.slice(1).toLowerCase()) : [];
-}
+import { extractTags } from "@/lib/utils";
 
 function dayLabel(dateStr: string): string {
   const d = new Date(dateStr);
@@ -67,7 +63,6 @@ export default function Home() {
       is_pinned: false,
       due_at: null,
       archived_at: null,
-      tags: extractTags(content),
     };
     setNotes([temp, ...notes]);
     setDraft("");
@@ -131,14 +126,25 @@ export default function Home() {
   return (
     <main className="mx-auto min-h-screen max-w-xl bg-zinc-950 px-4 pb-24">
       <div className="sticky top-0 z-10 bg-zinc-950 pb-3 pt-4">
-        <input
-          autoFocus
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addNote()}
-          placeholder="Capture a thought... use #tags"
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-200 outline-none focus:border-zinc-600"
-        />
+          <textarea
+  autoFocus
+  rows={1}
+  value={draft}
+  onChange={(e) => {
+    setDraft(e.target.value);
+    e.target.style.height = "auto";
+    e.target.style.height = e.target.scrollHeight + "px";
+  }}
+  onKeyDown={(e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      addNote();
+      e.currentTarget.style.height = "auto";
+    }
+  }}
+  placeholder="Capture a thought... Shift+Enter for a new line"
+  className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-sm leading-relaxed text-zinc-200 outline-none focus:border-zinc-600"
+/>
       </div>
 
       {pinned.length > 0 && (
