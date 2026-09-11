@@ -21,6 +21,13 @@ export default function TabBar() {
       {tab("/", "stream")}
       {tab("/todos", "todos")}
       {tab("/search", "search")}
+      <Link
+  href="/mini"
+  aria-label="compact mode"
+  className="px-3 py-3 font-mono text-xs text-zinc-700 hover:text-zinc-400"
+>
+  ▣
+</Link>
     </nav>
   );
 }

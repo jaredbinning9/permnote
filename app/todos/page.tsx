@@ -6,10 +6,12 @@ import { supabase } from "@/lib/supabase";
 import type { Note } from "@/lib/types";
 import NoteRow from "@/components/NoteRow";
 import TabBar from "@/components/TabBar";
+import { extractTags } from "@/lib/utils";
 
 export default function Todos() {
   const [todos, setTodos] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
+  const [draft, setDraft] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -60,6 +62,26 @@ export default function Todos() {
 
   return (
     <main className="mx-auto min-h-screen max-w-xl bg-zinc-950 px-4 pb-24 pt-4">
+        <div className="sticky top-0 z-10 bg-zinc-950 pb-2">
+  <textarea
+    rows={1}
+    value={draft}
+    onChange={(e) => {
+      setDraft(e.target.value);
+      e.target.style.height = "auto";
+      e.target.style.height = e.target.scrollHeight + "px";
+    }}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        addTodo();
+        e.currentTarget.style.height = "auto";
+      }
+    }}
+    placeholder="Add a todo..."
+    className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-sm leading-relaxed text-zinc-200 outline-none focus:border-zinc-600"
+  />
+</div>
       <h1 className="pb-2 font-mono text-xs uppercase tracking-widest text-zinc-600">
         open · {open.length}
       </h1>
@@ -84,4 +106,34 @@ export default function Todos() {
       <TabBar />
     </main>
   );
+}
+  async function addTodo() {
+  const content = draft.trim();
+  if (!content) return;
+  const temp: Note = {
+    id: crypto.randomUUID(),
+    content,
+    created_at: new Date().toISOString(),
+    is_todo: true,
+    is_done: false,
+    is_pinned: false,
+    due_at: null,
+    archived_at: null,
+    parent_id: null,
+    tags: extractTags(content),
+  };
+  setTodos((current) => [temp, ...current]);
+  setDraft("");
+  const { data, error } = await supabase
+    .from("notes")
+    .insert({ content, tags: temp.tags, is_todo: true })
+    .select()
+    .single();
+  if (error) {
+    setTodos((current) => current.filter((n) => n.id !== temp.id));
+    setDraft(content);
+    alert(`Save failed: ${error.message}`);
+  } else if (data) {
+    setTodos((current) => current.map((n) => (n.id === temp.id ? data : n)));
+  }
 }
