@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Note } from "@/lib/types";
+import { extractTags } from "@/lib/utils";
 import NoteRow from "@/components/NoteRow";
 import TabBar from "@/components/TabBar";
 import Toast from "@/components/Toast";
-import { extractTags } from "@/lib/utils";
+
+const CONTEXTS = ["all", "work", "personal"] as const;
+type Context = (typeof CONTEXTS)[number];
 
 function dayLabel(dateStr: string): string {
   const d = new Date(dateStr);
@@ -24,10 +27,14 @@ export default function Home() {
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [pinnedOpen, setPinnedOpen] = useState(false);
+  const [context, setContext] = useState<Context>("all");
   const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
+    const saved = localStorage.getItem("permnote-context");
+    if (saved && CONTEXTS.includes(saved as Context)) setContext(saved as Context);
+
     async function init() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -46,14 +53,24 @@ export default function Home() {
     init();
   }, [router]);
 
+  function pickContext(c: Context) {
+    setContext(c);
+    localStorage.setItem("permnote-context", c);
+  }
+
   function showToast(message: string, undo?: () => void) {
     setToast({ message, undo });
     setTimeout(() => setToast(null), 5000);
   }
 
   async function addNote() {
-    const content = draft.trim();
+    let content = draft.trim();
     if (!content) return;
+
+    if (context !== "all" && !extractTags(content).includes(context)) {
+      content = `${content} #${context}`;
+    }
+
     const temp: Note = {
       id: crypto.randomUUID(),
       content,
@@ -63,6 +80,7 @@ export default function Home() {
       is_pinned: false,
       due_at: null,
       archived_at: null,
+      tags: extractTags(content),
     };
     setNotes([temp, ...notes]);
     setDraft("");
@@ -113,10 +131,12 @@ export default function Home() {
     });
   }
 
-  const pinned = notes.filter((n) => n.is_pinned);
+  const visible =
+    context === "all" ? notes : notes.filter((n) => n.tags.includes(context));
+  const pinned = visible.filter((n) => n.is_pinned);
 
   const groups: { label: string; items: Note[] }[] = [];
-  for (const note of notes) {
+  for (const note of visible) {
     const label = dayLabel(note.created_at);
     const last = groups[groups.length - 1];
     if (last && last.label === label) last.items.push(note);
@@ -125,26 +145,45 @@ export default function Home() {
 
   return (
     <main className="mx-auto min-h-screen max-w-xl bg-zinc-950 px-4 pb-24">
-      <div className="sticky top-0 z-10 bg-zinc-950 pb-3 pt-4">
-          <textarea
-  autoFocus
-  rows={1}
-  value={draft}
-  onChange={(e) => {
-    setDraft(e.target.value);
-    e.target.style.height = "auto";
-    e.target.style.height = e.target.scrollHeight + "px";
-  }}
-  onKeyDown={(e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      addNote();
-      e.currentTarget.style.height = "auto";
-    }
-  }}
-  placeholder="Capture a thought... Shift+Enter for a new line"
-  className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-sm leading-relaxed text-zinc-200 outline-none focus:border-zinc-600"
-/>
+      <div className="sticky top-0 z-10 bg-zinc-950 pb-2 pt-4">
+        <textarea
+          autoFocus
+          rows={1}
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            e.target.style.height = "auto";
+            e.target.style.height = e.target.scrollHeight + "px";
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              addNote();
+              e.currentTarget.style.height = "auto";
+            }
+          }}
+          placeholder={
+            context === "all"
+              ? "Capture a thought... Shift+Enter for a new line"
+              : `Capture to #${context}...`
+          }
+          className="w-full resize-none rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-sm leading-relaxed text-zinc-200 outline-none focus:border-zinc-600"
+        />
+        <div className="mt-2 flex gap-1">
+          {CONTEXTS.map((c) => (
+            <button
+              key={c}
+              onClick={() => pickContext(c)}
+              className={`rounded-full px-3 py-1 font-mono text-xs ${
+                context === c
+                  ? "bg-zinc-800 text-zinc-200"
+                  : "text-zinc-600 hover:text-zinc-400"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
       </div>
 
       {pinned.length > 0 && (
@@ -158,15 +197,20 @@ export default function Home() {
           </button>
           {pinnedOpen &&
             pinned.map((note) => (
-              <NoteRow key={`pin-${note.id}`} note={note} onUpdate={updateNote} onArchive={archiveNote} />
+              <NoteRow
+                key={`pin-${note.id}`}
+                note={note}
+                onUpdate={updateNote}
+                onArchive={archiveNote}
+              />
             ))}
         </section>
       )}
 
       {loading && <p className="pt-8 text-center font-mono text-sm text-zinc-600">loading...</p>}
-      {!loading && notes.length === 0 && (
+      {!loading && visible.length === 0 && (
         <p className="pt-8 text-center font-mono text-sm text-zinc-600">
-          empty stream. type something above.
+          {context === "all" ? "empty stream. type something above." : `nothing in #${context} yet.`}
         </p>
       )}
 
