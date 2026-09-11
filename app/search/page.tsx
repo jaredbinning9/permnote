@@ -96,7 +96,14 @@ function SearchInner() {
         <p className="pt-8 text-center font-mono text-sm text-zinc-600">no matches.</p>
       )}
       {results.map((note) => (
-        <NoteRow key={note.id} note={note} onUpdate={updateNote} onArchive={archiveNote} />
+        <NoteRow
+  key={note.id}
+  note={note}
+  onUpdate={updateNote}
+  onArchive={archiveNote}
+  onStartThread={() => {}}
+  hasThread={true}
+/>
       ))}
       <TabBar />
     </main>

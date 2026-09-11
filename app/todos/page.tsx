@@ -99,7 +99,14 @@ export default function Todos() {
             done · {done.length}
           </h2>
           {done.map((note) => (
-            <NoteRow key={note.id} note={note} onUpdate={updateNote} onArchive={archiveNote}/>
+            <NoteRow
+                key={note.id}
+                note={note}
+                onUpdate={updateNote}
+                onArchive={archiveNote}
+                onStartThread={() => {}}
+                hasThread={true}
+              />
           ))}
         </>
       )}
