@@ -47,16 +47,17 @@ export default function Thread({
 
       {open && (
         <div className="border-l border-zinc-800 pl-3">
-          {children_.map((child) => (
-                    <NoteRow
-              key={note.id}
-              note={note}
-              onUpdate={updateNote}
-              onArchive={archiveNote}
-              onStartThread={() => {}}
-              hasThread={true}
-               />
-          ))}
+        {children_.map((child) => (
+  <NoteRow
+    key={child.id}
+    note={child}
+    onUpdate={onUpdate}
+    onArchive={onArchive}
+    onStartThread={() => {}}
+    hasThread={true}
+  />
+))}
+        
           <textarea
             autoFocus
             rows={1}
