@@ -17,6 +17,7 @@ export default function Mini() {
 
   useEffect(() => {
     async function init() {
+        localStorage.setItem("permnote-mode", "mini");
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push("/login");

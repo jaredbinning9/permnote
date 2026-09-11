@@ -36,6 +36,10 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
+    if (localStorage.getItem("permnote-mode") === "mini" && window.location.pathname === "/") {
+  router.push("/mini");
+  return;
+}
     const saved = localStorage.getItem("permnote-context");
     if (saved && CONTEXTS.includes(saved as Context)) setContext(saved as Context);
 
