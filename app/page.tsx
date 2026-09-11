@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Note } from "@/lib/types";
@@ -8,6 +8,7 @@ import { extractTags } from "@/lib/utils";
 import NoteRow from "@/components/NoteRow";
 import TabBar from "@/components/TabBar";
 import Toast from "@/components/Toast";
+import Thread from "@/components/Thread";
 
 const CONTEXTS = ["all", "work", "personal"] as const;
 type Context = (typeof CONTEXTS)[number];
@@ -81,6 +82,7 @@ export default function Home() {
       due_at: null,
       archived_at: null,
       tags: extractTags(content),
+      parent_id: null,
     };
     setNotes([temp, ...notes]);
     setDraft("");
@@ -97,6 +99,16 @@ export default function Home() {
       setNotes((current) => current.map((n) => (n.id === temp.id ? data : n)));
     }
   }
+
+  async function addChild(parentId: string, content: string) {
+  const { data, error } = await supabase
+    .from("notes")
+    .insert({ content, tags: extractTags(content), parent_id: parentId })
+    .select()
+    .single();
+  if (error) alert(`Save failed: ${error.message}`);
+  else if (data) setNotes((current) => [data, ...current]);
+}
 
   async function updateNote(id: string, changes: Partial<Note>) {
     const before = notes;
@@ -131,7 +143,13 @@ export default function Home() {
     });
   }
 
-  const visible =
+    const inContext =
+    context === "all" ? notes : notes.filter((n) => n.tags.includes(context));
+  const visible = inContext.filter((n) => !n.parent_id);
+  const childrenOf = (id: string) =>
+    notes
+      .filter((n) => n.parent_id === id)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     context === "all" ? notes : notes.filter((n) => n.tags.includes(context));
   const pinned = visible.filter((n) => n.is_pinned);
 
@@ -220,8 +238,17 @@ export default function Home() {
             {group.label}
           </h2>
           {group.items.map((note) => (
-            <NoteRow key={note.id} note={note} onUpdate={updateNote} onArchive={archiveNote} />
-          ))}
+  <Fragment key={note.id}>
+    <NoteRow note={note} onUpdate={updateNote} onArchive={archiveNote} />
+    <Thread
+      parent={note}
+      children_={childrenOf(note.id)}
+      onUpdate={updateNote}
+      onArchive={archiveNote}
+      onAddChild={addChild}
+    />
+  </Fragment>
+))}
         </section>
       ))}
 

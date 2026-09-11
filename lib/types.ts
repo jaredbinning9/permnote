@@ -8,4 +8,5 @@ export type Note = {
   due_at: string | null;
   archived_at: string | null;
   tags: string[];
+  parent_id: string | null;
 };
