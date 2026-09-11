@@ -10,11 +10,22 @@ type Props = {
   onUpdate: (id: string, changes: Partial<Note>) => void;
   onArchive: (note: Note) => void;
   onAddChild: (parentId: string, content: string) => void;
+  open: boolean;
+  onToggle: () => void;
 };
 
-export default function Thread({ parent, children_, onUpdate, onArchive, onAddChild }: Props) {
-  const [open, setOpen] = useState(false);
+export default function Thread({
+  parent,
+  children_,
+  onUpdate,
+  onArchive,
+  onAddChild,
+  open,
+  onToggle,
+}: Props) {
   const [draft, setDraft] = useState("");
+
+  if (!open && children_.length === 0) return null;
 
   function submit() {
     const content = draft.trim();
@@ -25,13 +36,14 @@ export default function Thread({ parent, children_, onUpdate, onArchive, onAddCh
 
   return (
     <div className="ml-8">
-      <button
-        onClick={() => setOpen(!open)}
-        className="py-0.5 font-mono text-[11px] text-zinc-600 hover:text-zinc-400"
-      >
-        {open ? "▾" : "▸"}{" "}
-        {children_.length > 0 ? `${children_.length} in thread` : "start thread"}
-      </button>
+      {children_.length > 0 && (
+        <button
+          onClick={onToggle}
+          className="py-0.5 font-mono text-[11px] text-zinc-600 hover:text-zinc-400"
+        >
+          {open ? "▾" : "▸"} {children_.length} in thread
+        </button>
+      )}
 
       {open && (
         <div className="border-l border-zinc-800 pl-3">
@@ -39,6 +51,7 @@ export default function Thread({ parent, children_, onUpdate, onArchive, onAddCh
             <NoteRow key={child.id} note={child} onUpdate={onUpdate} onArchive={onArchive} />
           ))}
           <textarea
+            autoFocus
             rows={1}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -47,8 +60,9 @@ export default function Thread({ parent, children_, onUpdate, onArchive, onAddCh
                 e.preventDefault();
                 submit();
               }
+              if (e.key === "Escape" && children_.length === 0) onToggle();
             }}
-            placeholder={`Add to this thread...`}
+            placeholder="Add to this thread..."
             className="mt-1 w-full resize-none rounded-lg border border-zinc-800 bg-zinc-900 p-2 text-sm text-zinc-300 outline-none focus:border-zinc-600"
           />
         </div>

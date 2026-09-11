@@ -9,11 +9,13 @@ type Props = {
   note: Note;
   onUpdate: (id: string, changes: Partial<Note>) => void;
   onArchive: (note: Note) => void;
+  onStartThread: () => void;
+  hasThread: boolean;
 };
 
 const CLAMP_THRESHOLD = 180;
 
-export default function NoteRow({ note, onUpdate, onArchive }: Props) {
+export default function NoteRow({ note, onUpdate, onArchive, onStartThread, hasThread }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.content);
   const [expanded, setExpanded] = useState(false);
@@ -139,36 +141,45 @@ export default function NoteRow({ note, onUpdate, onArchive }: Props) {
         </div>
 
         {!editing && (
-          <div className="flex shrink-0 items-start">
-            <button
-              onClick={() => onUpdate(note.id, { is_pinned: !note.is_pinned })}
-              aria-label="toggle pin"
-              className={`p-2 text-sm ${
-                note.is_pinned ? "text-amber-400" : "text-zinc-600 hover:text-zinc-400"
-              }`}
-            >
-              ✦
-            </button>
-            <button
-              onClick={() =>
-                onUpdate(note.id, { is_todo: !note.is_todo, is_done: false, due_at: null })
-              }
-              aria-label="toggle todo"
-              className={`p-2 text-sm ${
-                note.is_todo ? "text-amber-500" : "text-zinc-600 hover:text-zinc-400"
-              }`}
-            >
-              ◻
-            </button>
-            <button
-              onClick={() => onArchive(note)}
-              aria-label="archive note"
-              className="p-2 text-sm text-zinc-600 hover:text-red-400"
-            >
-              ×
-            </button>
-          </div>
-        )}
+  <div className="flex shrink-0 items-start">
+    {!hasThread && (
+      <button
+        onClick={onStartThread}
+        aria-label="start thread"
+        className="p-2 text-sm text-zinc-600 hover:text-zinc-400"
+      >
+        ⊕
+      </button>
+    )}
+    <button
+      onClick={() => onUpdate(note.id, { is_pinned: !note.is_pinned })}
+      aria-label="toggle pin"
+      className={`p-2 text-sm ${
+        note.is_pinned ? "text-amber-400" : "text-zinc-600 hover:text-zinc-400"
+      }`}
+    >
+      ✦
+    </button>
+    <button
+      onClick={() =>
+        onUpdate(note.id, { is_todo: !note.is_todo, is_done: false, due_at: null })
+      }
+      aria-label="toggle todo"
+      className={`p-2 text-sm ${
+        note.is_todo ? "text-amber-500" : "text-zinc-600 hover:text-zinc-400"
+      }`}
+    >
+      ◻
+    </button>
+    <button
+      onClick={() => onArchive(note)}
+      aria-label="archive note"
+      className="p-2 text-sm text-zinc-600 hover:text-red-400"
+    >
+      ×
+    </button>
+  </div>
+)}
       </div>
     </div>
   );

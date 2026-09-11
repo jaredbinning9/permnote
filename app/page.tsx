@@ -10,6 +10,8 @@ import TabBar from "@/components/TabBar";
 import Toast from "@/components/Toast";
 import Thread from "@/components/Thread";
 
+
+
 const CONTEXTS = ["all", "work", "personal"] as const;
 type Context = (typeof CONTEXTS)[number];
 
@@ -30,6 +32,7 @@ export default function Home() {
   const [pinnedOpen, setPinnedOpen] = useState(false);
   const [context, setContext] = useState<Context>("all");
   const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
+  const [openThreads, setOpenThreads] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   useEffect(() => {
@@ -58,6 +61,15 @@ export default function Home() {
     setContext(c);
     localStorage.setItem("permnote-context", c);
   }
+
+  function toggleThread(id: string) {
+  setOpenThreads((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
+}
 
   function showToast(message: string, undo?: () => void) {
     setToast({ message, undo });
@@ -220,6 +232,8 @@ export default function Home() {
                 note={note}
                 onUpdate={updateNote}
                 onArchive={archiveNote}
+                onStartThread={() => {}}
+                hasThread={true}
               />
             ))}
         </section>
@@ -238,16 +252,24 @@ export default function Home() {
             {group.label}
           </h2>
           {group.items.map((note) => (
-  <Fragment key={note.id}>
-    <NoteRow note={note} onUpdate={updateNote} onArchive={archiveNote} />
-    <Thread
-      parent={note}
-      children_={childrenOf(note.id)}
-      onUpdate={updateNote}
-      onArchive={archiveNote}
-      onAddChild={addChild}
-    />
-  </Fragment>
+<Fragment key={note.id}>
+  <NoteRow
+    note={note}
+    onUpdate={updateNote}
+    onArchive={archiveNote}
+    onStartThread={() => toggleThread(note.id)}
+    hasThread={childrenOf(note.id).length > 0}
+  />
+  <Thread
+    parent={note}
+    children_={childrenOf(note.id)}
+    onUpdate={updateNote}
+    onArchive={archiveNote}
+    onAddChild={addChild}
+    open={openThreads.has(note.id)}
+    onToggle={() => toggleThread(note.id)}
+  />
+</Fragment>
 ))}
         </section>
       ))}
